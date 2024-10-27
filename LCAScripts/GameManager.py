@@ -15,8 +15,8 @@ import subprocess
 
 
 is_debug = False
-sleeptime = 1.5
-class GameWindow:
+sleeptime = 1
+class GameManager:
     __instance = None
     #region properties
     __buttons = {}
@@ -26,7 +26,9 @@ class GameWindow:
     __size = Vector2.Vector2(0,0)
     __center = Vector2.Vector2(0,0)
     __panelcenter = Vector2.Vector2(0,0)
-    
+    gamepath="d:/SteamLibrary/steamapps/common/Limbus Company/LimbusCompany.exe"
+    gametitle = "LimbusCompany"
+    timeout = 300
     @classmethod
     def get_instance(cls):
         if cls.__instance is None:
@@ -42,7 +44,8 @@ class GameWindow:
             self.__size = Vector2.Vector2(width, height)
             self.__instance = self
     def __check(self):
-        if self.__size.x < 1280 or self.__size.y < 720:
+        if self.__size.x < 1200 or self.__size.y < 600:
+            print(f"err :Game window is too small, size is {self.__size.x}x{self.__size.y} !")
             return False
         return True
     def __locate_center(self , x,y):
@@ -53,6 +56,10 @@ class GameWindow:
         return self.__lefttop.x + self.__size.x + x*self.__size.x, self.__lefttop.y +40 + y*self.__size.x
     def __init(self):
         #region init buttons
+        self.__buttons["lefttop"] = self.__lefttop
+        
+        self.__buttons["rightdown"] = self.__lefttop + 0.97*self.__size
+        
         self.__center = self.__lefttop + self.__size/2
         self.__center.y = self.__center.y + 20 #The margin of the top
         self.__buttons["center"]=self.__center
@@ -62,16 +69,31 @@ class GameWindow:
         tempy = tempy - 0.09*self.__size.x/2
         self.__panelcenter = Vector2.Vector2(tempx, tempy)
         self.__buttons["panelcenter"] = self.__panelcenter
+        self.__buttons["paneltopcenter"] = Vector2.Vector2(tempx, tempy - 0.09*2*self.__size.x/2)
         
         self.__buttons["entergame"] = Vector2.Vector2(self.__center.x, self.__center.y)
+        
+        energebarx = self.__lefttop.x + 0.3 * self.__size.x
+        self.__buttons["energybar"] = Vector2.Vector2(energebarx, self.__panelcenter.y)
         
         tempx = self.__center.x + 0.09375*self.__size.x
         tempy = self.__center.y + 0.136*self.__size.x
         self.__buttons["bar_confirm"] = Vector2.Vector2(tempx, tempy)
         
+        tempy = self.__center.y - 0.105 * self.__size.x
+        self.__buttons["uselunacy"] = Vector2.Vector2(self.__center.x, tempy)
+        
         tempx = self.__center.x - 0.09375*self.__size.x
         tempy = self.__center.y + 0.136*self.__size.x
         self.__buttons["bar_cancel"] = Vector2.Vector2(tempx, tempy)
+        
+        tempx = self.__center.x + 0.125*self.__size.x
+        tempy = self.__center.y - 0.025*self.__size.x
+        self.__buttons["energy_max"] = Vector2.Vector2(tempx, tempy)
+        
+        tempy = self.__center.y - 0.105 * self.__size.x
+        tempx = self.__center.x - 0.105*self.__size.x
+        self.__buttons["useenergy"] = Vector2.Vector2(tempx, tempy)
         
         tempx = self.__center.x + 0.1875*self.__size.x
         self.__buttons["drive"] = Vector2.Vector2(tempx, self.__panelcenter.y)
@@ -134,6 +156,16 @@ class GameWindow:
         #region init images
         self.__imgines = load_image_from_path(os.path.join(os.path.dirname(__file__),"..","Image"))
         #endregion init images
+    def is_window_open(self):
+        windows = gw.getWindowsWithTitle(self.gametitle)
+        return len(windows) > 0
+    def get_window_position(self):
+        windows = gw.getWindowsWithTitle(self.gametitle)
+        if windows:
+            window = windows[0]
+            return window.left, window.top, window.width, window.height
+        else:
+            return None
     def init(self, left, top, width, height):
         self.__lefttop = Vector2.Vector2(left, top)
         self.__size = Vector2.Vector2(width, height)
@@ -143,6 +175,13 @@ class GameWindow:
         self.__size = size
         self.__init()
     def init_auto(self):
+        game_pos = self.get_window_position()
+        if game_pos is None:
+            print(f"Game window '{self.gametitle}'is not found")
+            return
+        if game_pos is not None:
+           left, top, width, height = game_pos       
+        self.init(left, top, width, height) 
         self.__init()
     def move_check(self):
         for name, button in self.__buttons.items():
@@ -172,36 +211,16 @@ class GameWindow:
         
         pag.click()
     def switch_box(self):
-        energebarx = self.__lefttop.x + 0.3 * self.__size.x
-        pag.moveTo(energebarx, self.__panelcenter.y)
-        time.sleep(1)
-        pag.click()
+        self.click("energybar")
         #切换到狂气
-        tempy = self.__center.y - 0.105 * self.__size.x
-        pag.moveTo(self.__center.x, tempy)
-        time.sleep(1)
-        pag.click()
+        self.click("uselunacy")
         #确认键
-        tempx = self.__center.x + 0.09375*self.__size.x
-        tempy = self.__center.y + 0.136*self.__size.x
-        pag.moveTo(tempx, tempy)
-        time.sleep(2*sleeptime)
-        pag.click()
-        time.sleep(2*sleeptime)
-        pag.click()
+        self.click("bar_confirm")
+        self.click("bar_confirm")
         #切换到模块
-        tempy = self.__center.y - 0.105 * self.__size.x
-        tempx = self.__center.x - 0.105*self.__size.x
-        pag.moveTo(tempx, tempy)
-        time.sleep(1)
-        pag.click()
-        
+        self.click("useenergy")        
         #模块最大值
-        tempx = self.__center.x + 0.125*self.__size.x
-        tempy = self.__center.y - 0.025*self.__size.x
-        pag.moveTo(tempx, tempy)
-        time.sleep(1)
-        pag.click()
+        self.click("energy_max")
         self.click("bar_confirm")
         self.click("bar_cancel")
         #TODO: 是否成功
@@ -242,6 +261,9 @@ class GameWindow:
             screenshot = pyautogui.screenshot(region=shotregion)
             if match_template(screenshot, self.__imgines["confirm_cn"]) or match_template(screenshot, self.__imgines["confirm_en"]):
                 print("dectect battle end")
+                break
+            #事件处理
+            if 0 :
                 break
             time.sleep(3*sleeptime)
             print("waiting for battle entering...")
@@ -321,7 +343,6 @@ class GameWindow:
         #TODO: 是否成功
     def start_game(self):
         bat_file_path = os.path.join(os.path.dirname(__file__),"..","Scripts", "startgame.bat")
-        gamepath="d:/SteamLibrary/steamapps/common/Limbus Company/LimbusCompany.exe"
         # 执行批处理文件并实时输出
         process = subprocess.Popen(
             [bat_file_path],
@@ -332,8 +353,8 @@ class GameWindow:
         )
         while True:
             if(process.stdout is None):
-                assert(0)
-                break
+                print("scripts :process.stdout is None")
+                return
             output = process.stdout.readline()
             if output == '' and process.poll() is not None:
                 break
@@ -343,43 +364,47 @@ class GameWindow:
         if stderr or process.returncode!= 0:
             print("Standard Error:")
             print(stderr)
-            assert(0)
+            return
         #检测游戏窗口出现 
-        def is_window_open(window_title):
-            windows = gw.getWindowsWithTitle(window_title)
-            return len(windows) > 0
-        def get_window_position(window_title):
-            windows = gw.getWindowsWithTitle(window_title)
-            if windows:
-                window = windows[0]
-                return window.left, window.top, window.width, window.height
-            else:
-                return None
-
-        gametitle = "LimbusCompany"
-        timeout = 300
         while True:
-            if is_window_open(gametitle):
-                print(f"Game window '{gametitle}'is appeared")
-                if(is_debug):
+            timer = self.timeout
+            initflag = False
+            if self.is_window_open():
+                print(f"Game window '{self.gametitle}'is appeared")
+                #初始化本类
+                if not initflag:
+                    self.init_auto()
+                    initflag = True
+                shotregion = self.get_region("lefttop", "center")
+                screenshot = pyautogui.screenshot(region=shotregion)
+                if match_template(screenshot, self.__imgines["fmod"]):
+                    print("dectect game entering page")
+                    self.click("entergame")
                     break
-                #TODO:
-                time.sleep(15)
-                break
+                shotregion = self.get_region("paneltopcenter", "rightdown")
+                screenshot = pyautogui.screenshot(region=shotregion)
+                if match_template(screenshot, self.__imgines["mainpanel"]):
+                    print("dectect game main panel, already in game")
+                    break
+                time.sleep(2*sleeptime)
             else:
-                print(f"Game window '{gametitle}'is not appeared waiting...")
-                time.sleep(2)
-                timeout-= 2
-                if timeout <= 0:
-                    print(f"Game window '{gametitle}'is not appeared in '{timeout}' seconds,timeout!")
-                    assert(0)
-        game_pos = get_window_position(gametitle)
-        if game_pos is None:
-            print(f"Game window '{gametitle}'is not found")
-            assert(0)
-        if game_pos is not None:
-            left, top, width, height = game_pos
-        pag.moveTo(left+width / 2, top+height / 2)
-        subprocess.run([gamepath], shell=True)
-        if(not is_debug):
-            pag.click()
+                print(f"Game window '{self.gametitle}'is not appeared waiting...")
+                time.sleep(2*sleeptime)
+                timer -= 2*sleeptime
+                if timer <= 0:
+                    print(f"Game window '{self.gametitle}'is not appeared in '{self.timeout}' seconds,timeout!")
+                    return
+        timer = self.timeout
+        while timer > 0:
+            shotregion = self.get_region("paneltopcenter", "rightdown")
+            screenshot = pyautogui.screenshot(region=shotregion)
+            if match_template(screenshot, self.__imgines["mainpanel"]):
+                print("dectect game main panel, already in game")
+                self.click("entergame")
+                break
+            print(f"Game isn't in main panel, waiting...")
+            time.sleep(2*sleeptime)
+            timer -= 2*sleeptime
+        if(timer <= 0):
+            print(f"Game window '{self.gametitle}'is not appeared in '{self.timeout}' seconds,timeout!")
+            return

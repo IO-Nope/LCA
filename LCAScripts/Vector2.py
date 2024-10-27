@@ -12,5 +12,11 @@ class Vector2:
         if isinstance(scalar, (int, float)):
             return Vector2(self.x / scalar, self.y / scalar)
         raise TypeError("除法运算只支持标量类型 (int 或 float)")
+    def __mul__(self, scalar):
+        if isinstance(scalar, (int, float)):
+            return Vector2(self.x * scalar, self.y * scalar)
+        raise TypeError("乘法运算只支持标量类型 (int 或 float)")
+    def __rmul__(self, other):
+        return self.__mul__(other)
     def __str__(self):
         return f"({self.x}, {self.y})"
