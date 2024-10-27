@@ -3,9 +3,8 @@ import os
 import time
 import pygetwindow as gw 
 import pyautogui as pag
-import subprocess
-import ButtonsManager
-is_debug = 1
+import GameManager
+is_debug = 0
 bat_file_path = os.path.join(os.path.dirname(__file__),"..","Scripts", "startgame.bat")
 gamepath="d:/SteamLibrary/steamapps/common/Limbus Company/LimbusCompany.exe"
 # 执行批处理文件并实时输出
@@ -75,11 +74,11 @@ if(not is_debug):
 
 if(not is_debug):
     time.sleep(30)
-getBMIns = ButtonsManager.GameWindow.get_instance
-getBMIns().init(left, top, width, height)
-#getBMIns().move_check()
-#getBMIns().switch_box()
-#getBMIns().daily_clear()
-#getBMIns().lux_clear()
-getBMIns().auto_fight()
+getGMIns = GameManager.GameWindow.get_instance
+getGMIns().init(left, top, width, height)
+#getGMIns().move_check()
+#getGMIns().switch_box()
+getGMIns().daily_clear()
+#getGMIns().lux_clear()
+#getGMIns().auto_fight()
 

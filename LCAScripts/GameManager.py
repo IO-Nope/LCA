@@ -11,10 +11,10 @@ sys.path.append(project_root)
 from Utils.utils import *
 import random
 from PIL import Image
+import subprocess
 
 
-
-
+is_debug = False
 sleeptime = 1.5
 class GameWindow:
     __instance = None
@@ -42,6 +42,8 @@ class GameWindow:
             self.__size = Vector2.Vector2(width, height)
             self.__instance = self
     def __check(self):
+        if self.__size.x < 1280 or self.__size.y < 720:
+            return False
         return True
     def __locate_center(self , x,y):
         return self.__center.x + x*self.__size.x, self.__center.y + y*self.__size.x
@@ -108,14 +110,6 @@ class GameWindow:
         tempx , tempy = self.__locate_center(-0.109,-0.109)
         self.__buttons["dailytask"] = Vector2.Vector2(tempx, tempy)
         
-        x,y =   calculate_by_rightdown_bottombase(380,225)
-        tempx, tempy = self.__locate_bottomCenter(x,y)
-        self.__buttons["fightpanelLU"] = Vector2.Vector2(tempx, tempy)
-        
-        x,y =   calculate_by_rightdown_bottombase(170,90)
-        tempx, tempy = self.__locate_bottomCenter(x,y)
-        self.__buttons["fightpanelRD"] = Vector2.Vector2(tempx, tempy)
-        
         x,y =   calculate_by_rightdown_centerbase(275,220)
         tempx, tempy = self.__locate_center(x,y)
         self.__buttons["confirmLU"] = Vector2.Vector2(tempx, tempy)
@@ -147,6 +141,8 @@ class GameWindow:
     def init_vector2(self, lefttop, size):
         self.__lefttop = lefttop
         self.__size = size
+        self.__init()
+    def init_auto(self):
         self.__init()
     def move_check(self):
         for name, button in self.__buttons.items():
@@ -189,9 +185,9 @@ class GameWindow:
         tempx = self.__center.x + 0.09375*self.__size.x
         tempy = self.__center.y + 0.136*self.__size.x
         pag.moveTo(tempx, tempy)
-        time.sleep(1)
+        time.sleep(2*sleeptime)
         pag.click()
-        time.sleep(2)
+        time.sleep(2*sleeptime)
         pag.click()
         #切换到模块
         tempy = self.__center.y - 0.105 * self.__size.x
@@ -210,6 +206,8 @@ class GameWindow:
         self.click("bar_cancel")
         #TODO: 是否成功
     def p_enter(self):
+        pag.click(self.__buttons["entergame"].x, self.__buttons["entergame"].y)
+        time.sleep(0.3*sleeptime)
         pag.press("p")
         time.sleep(0.6*sleeptime)
         pag.press("enter")
@@ -230,6 +228,9 @@ class GameWindow:
             raise Exception("Vector out of screen")
         print(f"Region: {aimLU.x}, {aimLU.y}, {aimRD.x - aimLU.x}, {aimRD.y - aimLU.y}")
         return(aimLU.x, aimLU.y, aimRD.x - aimLU.x, aimRD.y - aimLU.y)
+    def events_deal(self):
+        #TODO: 处理事件
+        return
     def auto_fight(self):
         while True:
             #与战斗开始process模糊匹配 成功则退出等待状态
@@ -245,6 +246,7 @@ class GameWindow:
             time.sleep(3*sleeptime)
             print("waiting for battle entering...")
         while True:
+            #TODO: 战斗中出现的选项匹配
             #与战斗process模糊匹配 成功则退出等待状态
             shotregion = self.get_region("fightproceesLU", "fightproceesRD")
             screenshot = pyautogui.screenshot(region=shotregion)
@@ -296,7 +298,6 @@ class GameWindow:
         self.click("startbattle")
         time.sleep(3*sleeptime)
         self.auto_fight()
-        pag.press("esc")
         self.click("bond")
         for i in range(3):
             self.click("bondentry")
@@ -304,8 +305,6 @@ class GameWindow:
             self.click("startbattle")
             time.sleep(3*sleeptime)
             self.auto_fight()
-            time.sleep(sleeptime)
-            pag.press("esc")
         time.sleep(sleeptime)
         pag.press("esc")
         self.click("window")
@@ -320,4 +319,67 @@ class GameWindow:
         time.sleep(sleeptime)
         pag.press("esc")
         #TODO: 是否成功
-        
+    def start_game(self):
+        bat_file_path = os.path.join(os.path.dirname(__file__),"..","Scripts", "startgame.bat")
+        gamepath="d:/SteamLibrary/steamapps/common/Limbus Company/LimbusCompany.exe"
+        # 执行批处理文件并实时输出
+        process = subprocess.Popen(
+            [bat_file_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True,
+            universal_newlines=True
+        )
+        while True:
+            if(process.stdout is None):
+                assert(0)
+                break
+            output = process.stdout.readline()
+            if output == '' and process.poll() is not None:
+                break
+            if output:
+                print(output.strip())
+        stderr = process.communicate()[1]
+        if stderr or process.returncode!= 0:
+            print("Standard Error:")
+            print(stderr)
+            assert(0)
+        #检测游戏窗口出现 
+        def is_window_open(window_title):
+            windows = gw.getWindowsWithTitle(window_title)
+            return len(windows) > 0
+        def get_window_position(window_title):
+            windows = gw.getWindowsWithTitle(window_title)
+            if windows:
+                window = windows[0]
+                return window.left, window.top, window.width, window.height
+            else:
+                return None
+
+        gametitle = "LimbusCompany"
+        timeout = 300
+        while True:
+            if is_window_open(gametitle):
+                print(f"Game window '{gametitle}'is appeared")
+                if(is_debug):
+                    break
+                #TODO:
+                time.sleep(15)
+                break
+            else:
+                print(f"Game window '{gametitle}'is not appeared waiting...")
+                time.sleep(2)
+                timeout-= 2
+                if timeout <= 0:
+                    print(f"Game window '{gametitle}'is not appeared in '{timeout}' seconds,timeout!")
+                    assert(0)
+        game_pos = get_window_position(gametitle)
+        if game_pos is None:
+            print(f"Game window '{gametitle}'is not found")
+            assert(0)
+        if game_pos is not None:
+            left, top, width, height = game_pos
+        pag.moveTo(left+width / 2, top+height / 2)
+        subprocess.run([gamepath], shell=True)
+        if(not is_debug):
+            pag.click()
